@@ -16,6 +16,9 @@ Gerald Eisenhaur <gerry.eisenhaur@gmail.com>
 Jared DeMott <jdemott@appliedsec.com>
     - General ideas, beta testing and morale support.
 
+nnp <http://www.unprotectedhex.com>
+    - Unix process monitor agent.
+
 Peter Silberman <peter.silberman@gmail.com>
     - General ideas, beta testing and morale support.
     - Upcoming file fuzzing capability.
