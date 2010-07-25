@@ -34,6 +34,16 @@ class base_primitive (object):
         return num
 
 
+    def skip (self, skip):
+        if skip > self.num_mutations():
+                self.fuzz_complete = True
+                self.mutant_index = self.num_mutations()
+                return self.mutant_index
+        else:
+                self.mutant_index = skip
+        return skip
+
+
     def mutate (self):
         '''
         Mutate the primitive by stepping through the fuzz library, return False on completion.
@@ -206,6 +216,7 @@ class group (base_primitive):
             for val in self.values:
                 assert type(val) is str, "Value list may only contain strings or raw data"
 
+    #No skip function needed, base class function should work fine
 
     def mutate (self):
         '''
@@ -282,6 +293,7 @@ class random_data (base_primitive):
         if self.step:
             self.max_mutations = (self.max_length - self.min_length) / self.step + 1
 
+    #No skip function needed, base class function should work fine
 
     def mutate (self):
         '''
@@ -564,6 +576,7 @@ class string (base_primitive):
             long_string = sequence * length
             string.fuzz_library.append(long_string)
 
+    #No skip function needed, base class function should work fine
 
     def mutate (self):
         '''

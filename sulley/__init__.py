@@ -6,6 +6,8 @@ import sulley.primitives
 import sulley.sex
 import sulley.sessions
 import sulley.utils
+import sulley.executors
+import sulley.sessions_fork
 
 BIG_ENDIAN      = ">"
 LITTLE_ENDIAN   = "<"

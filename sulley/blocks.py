@@ -34,6 +34,22 @@ class request (pgraph.node):
         self.mutant        = None    # current primitive being mutated.
 
 
+    def skip (self, skip):
+        skipped = 0
+        for item in self.stack:
+                if skip == 0:
+                        break
+                if skip < 0:
+                        print "Skip less than 0, a fuzzable has a bug"
+                        break
+                if item.fuzzable:
+                        temp = item.skip(skip)
+                        skip -= temp
+                        skipped += temp
+        print "request node has skipped %d of %d" % (skipped, skip)
+        return skipped
+                            
+
     def mutate (self):
         mutated = False
 
@@ -223,12 +239,30 @@ class block:
         self.mutant_index  = 0      # current mutation index.
 
 
+
+    #The skip logic needs to match the mutate logic, but not actually do anything
+    #rather than have two functions with the same logic we use a mutate sub (better idea?)
+    def skip (self, skip):
+        #Note - do not call skip after starting mutations
+        skipped,mutated = mutate_sub(skip)
+        return skipped
+        
+
     def mutate (self):
+        skipped,mutated = mutate_sub(0)
+        return mutated
+
+    def mutate_sub (self, skip):
+        skipped = 0
+        skipping = False
+        if skip > 0:
+                skipping = True
+
         mutated = False
 
         # are we done with this block?
         if self.fuzz_complete:
-            return False
+            return skipped,False # fuzz_complete will only be set after skip has been used
 
         #
         # mutate every item on the stack for every possible group value.
@@ -242,7 +276,17 @@ class block:
 
             # mutate every item on the stack at the current group value.
             for item in self.stack:
-                if item.fuzzable and item.mutate():
+                if item.fuzzable and skipping:
+                    if skip == 0:
+                        return skipped, False
+                    if skip < 0:
+                        print "Bug in a primtive beloging to this block, skip is negative.."
+                        return skipped, False
+                    temp = item.skip(skip)
+                    skip -= temp
+                    skipped += temp
+                    print "group skip: %d of %d" % skipped,skip
+                elif item.fuzzable and item.mutate():
                     mutated = True
 
                     if not isinstance(item, block):
@@ -274,7 +318,17 @@ class block:
                     # now mutate the first field in this block before continuing.
                     # (we repeat a test case if we don't mutate something)
                     for item in self.stack:
-                        if item.fuzzable and item.mutate():
+                        if item.fuzzable and skipping:
+                                if skip == 0:
+                                        return skipped, False
+                                if skip < 0:
+                                        print "Bug in primitive..."
+                                        return skipped, False
+                                temp = item.skip(skip)
+                                skip -= temp
+                                skipped += temp
+                                print "group skipped: %d of %d" % skipped,skip
+                        elif item.fuzzable and item.mutate():
                             mutated = True
 
                             if not isinstance(item, block):
@@ -288,7 +342,17 @@ class block:
 
         else:
             for item in self.stack:
-                if item.fuzzable and item.mutate():
+                if item.fuzzable and skipping:
+                        if skip == 0:
+                                return skipped, False
+                        if skip < 0:
+                                print "sigh.. another bug.."
+                                return skipped, False
+                        temp = item.skip(skip)
+                        skip -= temp
+                        skipped += temp
+                        print "block skipped: %d of %d" % skipped, skip
+                elif item.fuzzable and item.mutate():
                     mutated = True
 
                     if not isinstance(item, block):
@@ -313,14 +377,14 @@ class block:
             self.fuzz_complete = True
 
             # if we had a dependancy, make sure we restore the original value.
-            if self.dep:
+            if self.dep and not skipping:
                 self.request.names[self.dep].value = self.request.names[self.dep].original_value
 
         if mutated:
             if not isinstance(item, block):
                 self.request.mutant = item
 
-        return mutated
+        return skipped,mutated
 
 
     def num_mutations (self):
@@ -605,6 +669,9 @@ class repeat:
             self.fuzzable = False
 
 
+    def skip (self):
+        raise sex.error("SKIP ON REPEATER NOT CURRENTLY SUPPORTED, sorry")
+
     def mutate (self):
         '''
         Mutate the primitive by stepping through the fuzz library, return False on completion. If variable-bounding is
@@ -762,6 +829,15 @@ class size:
         return num
 
 
+    def skip (self, skip):
+        if not self.fuzzable:
+                return 0
+        self.mutant_index = self.bit_field.skip(skip)
+        if self.mutant_index == self.num_mutations():
+                self.fuzz_complete = True
+        return self.mutant_index
+
+ 
     def mutate (self):
         '''
         Wrap the mutation routine of the internal bit_field primitive.
@@ -769,6 +845,9 @@ class size:
         @rtype:  Boolean
         @return: True on success, False otherwise.
         '''
+
+        if not self.fuzzable:
+                return False
 
         if self.mutant_index == self.num_mutations():
             self.fuzz_complete = True
@@ -785,6 +864,9 @@ class size:
         @rtype:  Integer
         @return: Number of mutated forms this primitive can take.
         '''
+
+        if not self.fuzzable:
+                return 0
 
         return self.bit_field.num_mutations()
 
