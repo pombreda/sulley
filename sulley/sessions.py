@@ -98,14 +98,12 @@ class connection (pgraph.edge.edge):
 
 ########################################################################################################################
 class session (pgraph.graph):
-    def __init__ (self, fuzzExecutor, session_filename=None, skip=0, percent_start=0.0, percent_end=1.0, sleep_time=1.0, log_level=2, restart_interval=0, crash_threshold=3, restart_sleep_time=300, session_save_frequency=100):
+    def __init__ (self, fuzzExecutor, session_filename=None, percent_start=0.0, percent_end=1.0, sleep_time=1.0, log_level=2, restart_interval=0, crash_threshold=3, restart_sleep_time=300, session_save_frequency=100):
         '''
         Extends pgraph.graph and provides a container for architecting protocol dialogs.
 	@type  fuzzExecutor:       fuzzExecute
         @type  session_filename:   String
         @kwarg session_filename:   (Optional, def=None) Filename to serialize persistant data to
-        @type  skip:               Integer
-        @kwarg skip:               (Optional, def=0) Number of test cases to skip
         @type  percent_start:      Float
         @kwarg percent_start:      (Optional, def=0.0) Percent of test cases to start at
         @type  percent_end:        Float
@@ -128,7 +126,6 @@ class session (pgraph.graph):
         pgraph.graph.__init__(self)
         self.fuzzExecutor	 = fuzzExecutor
         self.session_filename    = session_filename
-        self.skip                = skip
         self.percent_start       = percent_start
         self.percent_end         = percent_end
         self.sleep_time          = sleep_time
@@ -392,7 +389,7 @@ class session (pgraph.graph):
                 if self.total_mutant_index >= (self.percent_end * self.total_num_mutations):
                         print "Done"
                         return
-                if (self.total_mutant_index >= self.total_mutant_index_start) and (self.total_mutant_index >= (self.skip + self.total_mutant_index_start)):
+                if (self.total_mutant_index >= self.total_mutant_index_start):
                     self.log("fuzzing %d of %d" % (self.fuzz_node.mutant_index, num_mutations), 2)
 
 
@@ -498,9 +495,6 @@ class session (pgraph.graph):
             fh.close()
         except:
             return
-
-        # update the skip variable to pick up fuzzing from last test case.
-        self.skip                = data["total_mutant_index"]
 
         self.session_filename    = data["session_filename"]
         self.sleep_time          = data["sleep_time"]
@@ -687,7 +681,12 @@ class session (pgraph.graph):
         Called by fuzz() on first run (not on recursive re-entry) to initialize variables, web interface, etc...
         '''
         self.total_num_mutations = self.num_mutations()
-        self.total_mutant_index_start  = int(math.floor(self.total_num_mutations * self.percent_start))
+        if self.total_mutant_index == 0:
+                self.total_mutant_index_start = int(math.floor(self.total_num_mutations * self.percent_start))
+        else: #we are resuming from a saved session
+                self.total_mutant_index_start = self.total_mutant_index
+		print "server_init setting mutant_index_start to: %d" % self.total_mutant_index
+		self.total_mutant_index = 0
 
     ####################################################################################################################
     def transmit (self, fuzzExecutor, node, edge):

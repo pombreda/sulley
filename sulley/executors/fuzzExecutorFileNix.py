@@ -45,7 +45,10 @@ class fuzzExecuteFileNix (fuzzExecutor.fuzzExecute):
                 if self.file:
                         self.file.close()
                 if self.tmpname:
-                        os.remove(self.tmpname)
+                        try:
+                                os.remove(self.tmpname)
+                        except:
+                                print "temp file could not be removed: ", self.tmpname
                 if self.pid:
                         os.kill(self.pid, signal.SIGKILL)
 

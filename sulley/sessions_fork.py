@@ -26,6 +26,7 @@ class session_fork:
                 self.session_orig.percent_start = (1.0/number_procs) * childId
                 self.session_orig.percent_end = (1.0/number_procs) * (childId+1)
                 self.session_orig.session_filename = self.session_orig.session_filename + "_ChildID%d" % childId
+                self.session_orig.import_file()
 		pid = os.fork() #not available on windows
 		if pid != 0:
 	                child_pids.append(pid)
@@ -37,7 +38,7 @@ class session_fork:
 
         for pid in child_pids:
 		os.waitpid(pid, 0)
-                print "Child with pid: %d ended" % pid
+		print "Child with pid: %d ended" % pid
 
         print "All procs finished\n"
 
