@@ -25,19 +25,24 @@ RANDOM_STR = "RANDOM_STR"
 FUZZED_INPUT_FILE = "FUZZED_INPUT_FILE"
 
 class fuzzExecuteFileNix (fuzzExecutor.fuzzExecute):
-	def __init__(self, tmpdir, cmdStr, timeout=10, crashsaves="/crash_inputs/", sleepinterval=.1 ):
+	def __init__(self, tmpdir, cmdStr, timeout=10, crashsaves="/crash_inputs/", sleepinterval=.1, save_timeouts=True, timeout_dir="/timout_inputs/" ):
                 self.timeout = timeout
 		self.sleepinterval = sleepinterval
                 self.cmdStr = cmdStr
                 self.tmpdir = tmpdir
                 self.tmpname = None
                 self.file = None
-                self.pid = None
                 self.crashsaves = tmpdir + crashsaves
+                self.timeout_dir = tmpdir + timeout_dir
+                self.save_timeouts = save_timeouts
 		try:
 	                os.makedirs(self.crashsaves)
 		except:
 			print "mkdir failed ", self.crashsaves
+                try:
+                        os.makedirs(self.timeout_dir)
+                except:
+                        print "mkdir failed ", self.timeout_dir
                 random.seed()
 
         #close any open fd/socks and clean up any mess
@@ -49,8 +54,6 @@ class fuzzExecuteFileNix (fuzzExecutor.fuzzExecute):
                                 os.remove(self.tmpname)
                         except:
                                 print "temp file could not be removed: ", self.tmpname
-                if self.pid:
-                        os.kill(self.pid, signal.SIGKILL)
 
         def initFuzz(self):
                 (fd, self.tmpname) = tempfile.mkstemp(suffix="fuzzy", dir=self.tmpdir)
@@ -68,18 +71,41 @@ class fuzzExecuteFileNix (fuzzExecutor.fuzzExecute):
                 print "CMDSTR: ", cmd 
                 p = subprocess.Popen(['/bin/sh', '-c', cmd])
                 x = 0
+
                 while x < self.timeout :
                         x += self.sleepinterval
                         if p.poll() ==  None:
                                 time.sleep(self.sleepinterval)
                         else:
                                 break
+
                 if x >= self.timeout and p.returncode == None:
 			print "Timeout detected, killing process"
-                        p.kill()
-                elif p.returncode != 0: #todo allow user to set what signals, not just all
+                        try:
+                                os.kill(p.pid, signal.SIGKILL)
+                        except:
+                                print "kill of pid failed: %d" % p.pid
+                        if self.save_timeouts:
+                                saved_file = self.timeout_dir + os.path.basename(self.tmpname)
+                                fd = None
+                                if os.path.exists(saved_file):
+                                        (fd, saved_file) = tempfile.mkstemp(suffix=os.path.basename(self.tmpname), dir=self.crashsaves)
+                                print "Saving input file to: " + saved_file
+                                shutil.copyfile(self.tmpname, saved_file)
+                                if fd:
+                                        fd.close()
+
+                elif p.returncode < 0: #todo allow user to set what signals, not just all
                         print "Crash by signal detected, returncode: ", p.returncode
-                        shutil.copyfile(self.tmpname, self.crashsaves)
+                        saved_file = self.crashsaves + os.path.basename(self.tmpname)
+                        fd = None
+                        if os.path.exists(saved_file):
+                                (fd, saved_file) = tempfile.mkstemp(suffix=os.path.basename(self.tmpname), dir=self.crashsaves)
+                        print "Saving input file to: " + saved_file
+                        shutil.copyfile(self.tmpname, saved_file)
+                        if fd:
+                                fd.close()
+                        
                 else:
 			print "return code: ", p.returncode        
                         
