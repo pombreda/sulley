@@ -3,8 +3,7 @@ import primitives
 import sex
 
 import zlib
-import md5
-import sha
+import hashlib
 import struct
 
 REQUESTS = {}
@@ -492,7 +491,7 @@ class checksum:
                 return struct.pack(self.endian+"L", zlib.adler32(data))
 
             elif self.algorithm == "md5":
-                digest = md5.md5(data).digest()
+                digest = hashlib.md5(data).digest()
 
                 # XXX - is this right?
                 if self.endian == ">":
@@ -502,7 +501,7 @@ class checksum:
                 return digest
 
             elif self.algorithm == "sha1":
-                digest = sha.sha(data).digest()
+                digest = hashlib.sha1(data).digest()
 
                 # XXX - is this right?
                 if self.endian == ">":

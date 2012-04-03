@@ -785,7 +785,7 @@ class session (pgraph.graph):
 
         self.log("xmitting: [%d.%d]" % (node.id, self.total_mutant_index), level=2)
 
-        # if not data was returned by the callback, render the node here.
+        # if no data was returned by the callback, render the node here.
         if not data:
             data = node.render()
 
